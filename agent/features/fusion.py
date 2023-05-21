@@ -7,7 +7,7 @@ from ..utils import build_mlp
 class SimpleCNNEncoder(nn.Module):
     def __init__(self, input_size, output_size, device):
         super().__init__()
-        input_H, input_W = input_size
+        input_H, input_W, num_channel = input_size
         assert input_H % 8 == 0 and input_W % 8 == 0
         self.device = device
         self.input_H, self.input_W = input_H, input_W

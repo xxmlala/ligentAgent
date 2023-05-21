@@ -18,6 +18,7 @@ from agent.ppo import PPOAgent
 from buffer import ReplayBuffer, PrioritizedReplayBuffer, PPOReplayBuffer, get_buffer
 
 from taskEnv import ComeHereEnv
+import time
 '''
 only modified the PPO related Buffer (ReplayBuffer and PPOBuffer)
 
@@ -96,6 +97,7 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
     # state, _ = env.reset(seed=seed)
     state = env.reset()
     env_decoder.reset()
+    last_reset_time = time.time()
     for step in range(cfg.vec_envs, cfg.timesteps + 1, cfg.vec_envs):
         if cfg.vec_envs > 1 and done.any():
             rewards = np.array([d['episode']['r'] for d in info['final_info'][info['_final_info']]]).squeeze(-1)
@@ -103,7 +105,9 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
             other_utils.write_to_dict(local_log_dict, 'train_steps', step - cfg.vec_envs, using_mp)
         elif cfg.vec_envs <= 1 and (done or truncated):
             state = env.reset()
-            env_decoder.reset()
+            elspsed_step = env_decoder.reset()
+            print(f"It gets {cumulate_reward} reward, costs {time.time()-last_reset_time} s and {elspsed_step} steps!")
+            last_reset_time = time.time()
             done, truncated = False, False
             # other_utils.write_to_dict(local_log_dict, 'train_returns', info['episode']['r'].item(), using_mp)
             other_utils.write_to_dict(local_log_dict, 'train_returns', cumulate_reward, using_mp)

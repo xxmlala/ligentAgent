@@ -19,7 +19,6 @@ def main(cfg):
 
 
 if __name__ == "__main__":
-    # print(os.chdir())
-    os.chdir("/home/liuan/workspace/drl_project/LIGENT")
+    
     with Display(visible=False) as disp:
         main()

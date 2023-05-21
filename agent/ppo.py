@@ -212,7 +212,7 @@ class PPOAgent:
                     policy_losses.append(ret_dict['policy_loss'])
                     value_losses.append(ret_dict['value_loss'])
                     entropy_losses.append(ret_dict['entropy_loss'])
-
+        print('.',end="",flush=True)
         return {'policy_loss': np.mean(policy_losses), 
                 'value_loss': np.mean(value_losses),
                 'entropy_loss': np.mean(entropy_losses)}
