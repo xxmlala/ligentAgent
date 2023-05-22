@@ -15,7 +15,6 @@ class ComeHereEnv:
         _ret = self._elapsed_step
         self._elapsed_step = 0
         self._cumulate_reward = 0
-        return _ret
     
     def step(self, info):
         self._elapsed_step += 1
@@ -34,4 +33,4 @@ class ComeHereEnv:
         reward = distance_coef * self._distance_reward
         done = distance < self._distance_min or self._elapsed_step >= self._episode_len
         self._cumulate_reward += reward
-        return reward, done, self._cumulate_reward
+        return reward, done, self._cumulate_reward, self._elapsed_step

@@ -29,18 +29,23 @@ only modified the PPO related Buffer (ReplayBuffer and PPOBuffer)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # device='cpu'
 # TODO: the return value in vectorized env is significantly lower than the non-vectorized env, why?
-def eval(env, agent, episodes, seed, action_decoder):
+def eval(env, agent, episodes, seed, action_decoder, env_decoder):
     returns = []
     for episode in range(episodes):
-        state, _ = env.reset(seed=np.random.randint(0, 10000) + seed)
+        # state, _ = env.reset(seed=np.random.randint(0, 10000) + seed)
+        state_img, state_text = env.reset()
+        env_decoder.reset()
         done, truncated = False, False
         while not (done or truncated):
-            state = np.expand_dims(state, 0)
-            action = agent.get_action(state, sample=False).squeeze(0)
-            # state, _, done, truncated, info = env.step(action)
-            action_env = action_decoder(action)
-            state, _, done, info = env.step(action_env)
-        returns.append(info['episode']['r'].item())
+            state_img = np.expand_dims(state_img, 0)
+            state_text = np.expand_dims(state_text, 0)
+            action = agent.get_action((state_img,state_text), sample=False).squeeze(0)
+            action_env = action_decoder.decode(action)
+            # state, _, _, info = env.step(action_env)
+            (state_img, state_text), _, _, info = env.step(**action_env)
+            reward, done, cumulate_reward, elpased_step = env_decoder.step(info)
+        # returns.append(info['episode']['r'].item())
+        returns.append(cumulate_reward/elpased_step)
     return np.mean(returns), np.std(returns)
 
 
@@ -61,10 +66,10 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
     # env = gym.vector.SyncVectorEnv([make_env] * cfg.vec_envs) if cfg.vec_envs > 1 else make_env()
     env = ligent.Environment(path="/home/liuan/workspace/drl_project/ligent-linux-server/LIGENT.x86_64")
     env_decoder = ComeHereEnv(distance_reward=10, distance_min=1.2, episode_len=500)
-    # env = ComeHereDenseRewardEnv(distance_reward=10, distance_min=1.2)
     action_decoder = instantiate(cfg.action_decoder, device=device)
     other_utils.set_seed_everywhere(env, seed)
 
+    eval_env_decoder = deepcopy(env_decoder)
     # state_size = other_utils.get_space_shape(env.observation_space, is_vector_env=cfg.vec_envs > 1)
     # action_size = other_utils.get_space_shape(env.action_space, is_vector_env=cfg.vec_envs > 1)
 
@@ -78,7 +83,6 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
     # get_attr of omega_conf is slow, so we convert it to dotmap
     cfg = DotMap(OmegaConf.to_container(cfg.train, resolve=True))
 
-    # eval_env = deepcopy(env) if cfg.vec_envs <= 1 else deepcopy(env.envs[0])
     logger.info(f"Training seed {seed} for {cfg.timesteps} timesteps with {agent} and {buffer}")
 
     using_mp = barrier is not None
@@ -98,19 +102,21 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
     state = env.reset()
     env_decoder.reset()
     last_reset_time = time.time()
+    just_evaluated = False
     for step in range(cfg.vec_envs, cfg.timesteps + 1, cfg.vec_envs):
         if cfg.vec_envs > 1 and done.any():
             rewards = np.array([d['episode']['r'] for d in info['final_info'][info['_final_info']]]).squeeze(-1)
             other_utils.write_to_dict(local_log_dict, 'train_returns', np.mean(rewards).item(), using_mp)
             other_utils.write_to_dict(local_log_dict, 'train_steps', step - cfg.vec_envs, using_mp)
-        elif cfg.vec_envs <= 1 and (done or truncated):
+        elif cfg.vec_envs <= 1 and (done or truncated or just_evaluated):
+            just_evaluated = False
             state = env.reset()
-            elspsed_step = env_decoder.reset()
-            print(f"It gets {cumulate_reward} reward, costs {time.time()-last_reset_time} s and {elspsed_step} steps!")
+            env_decoder.reset()
+            # print(f"It gets {round(cumulate_reward/elspsed_step,3)} mean reward, costs {round(time.time()-last_reset_time,3)} s and {elspsed_step} steps!")
             last_reset_time = time.time()
             done, truncated = False, False
             # other_utils.write_to_dict(local_log_dict, 'train_returns', info['episode']['r'].item(), using_mp)
-            other_utils.write_to_dict(local_log_dict, 'train_returns', cumulate_reward, using_mp)
+            other_utils.write_to_dict(local_log_dict, 'train_returns', round(cumulate_reward/elspsed_step,3), using_mp)
             other_utils.write_to_dict(local_log_dict, 'train_steps', step - 1, using_mp)
 
         if isinstance(agent, PPOAgent):
@@ -121,7 +127,7 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
         action_env = action_decoder.decode(action)
         # next_state, reward, done, truncated, info = env.step(action)
         next_state, reward, done, info = env.step(**action_env)
-        reward, done, cumulate_reward = env_decoder.step(info)
+        reward, done, cumulate_reward, elspsed_step = env_decoder.step(info)
         if isinstance(buffer, PPOReplayBuffer):
             value = agent.get_value(state)
             if cfg.vec_envs > 1 and done.any(): # won't be exectued
@@ -157,19 +163,23 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
             for key in ret_dict.keys():
                 other_utils.write_to_dict(local_log_dict, key, ret_dict[key], using_mp)
 
-        # eval_cond = step % cfg.eval_interval == 0
-        # if cfg.vec_envs > 1:
-        #     eval_cond = step > cfg.vec_envs + 1 and np.any(np.arange(step - cfg.vec_envs + 1, step + 1) % cfg.eval_interval == 0)
-        # if eval_cond:
-        #     eval_mean, eval_std = eval(eval_env, agent=agent, episodes=cfg.eval_episodes, seed=seed)
-        #     other_utils.write_to_dict(local_log_dict, 'eval_steps', step - 1, using_mp)
-        #     other_utils.write_to_dict(local_log_dict, 'eval_returns', eval_mean, using_mp)
-        #     logger.info(f"Seed: {seed}, Step: {step}, Eval mean: {eval_mean:.2f}, Eval std: {eval_std:.2f}")
-        #     if eval_mean > best_reward:
-        #         best_reward = eval_mean
-        #         if using_mp:
-        #             logger.info(f'Seed: {seed}, Save best model at eval mean {best_reward:.4f} and step {step}')
-        #         agent.save(f'best_model_seed_{seed}.pt')
+        eval_cond = step % cfg.eval_interval == 0
+        if cfg.vec_envs > 1:
+            eval_cond = step > cfg.vec_envs + 1 and np.any(np.arange(step - cfg.vec_envs + 1, step + 1) % cfg.eval_interval == 0)
+        if eval_cond:
+            eval_mean, eval_std = eval(env, agent=agent, episodes=cfg.eval_episodes, seed=seed, 
+                                       action_decoder=action_decoder, env_decoder=eval_env_decoder)
+            other_utils.write_to_dict(local_log_dict, 'eval_steps', step - 1, using_mp)
+            other_utils.write_to_dict(local_log_dict, 'eval_returns', eval_mean, using_mp)
+            logger.info(f"Seed: {seed}, Step: {step}, Eval mean: {eval_mean:.2f}, Eval std: {eval_std:.2f}")
+            if eval_mean > best_reward:
+                best_reward = eval_mean
+                if using_mp:
+                    logger.info(f'Seed: {seed}, Save best model at eval mean {best_reward:.4f} and step {step}')
+                else:
+                    logger.info(f'Seed: {seed}, Save best model at eval mean {best_reward:.4f} and step {step}')
+                agent.save(f'best_model_seed_{seed}.pt')
+            just_evaluated = True
             
         
         plot_cond = step % cfg.plot_interval == 0
@@ -192,4 +202,4 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
     # env.close()
     # logger.info(f"Finish training seed {seed} with everage eval mean: {eval_mean}")
     # return eval_mean
-    return -1
+    return eval_mean

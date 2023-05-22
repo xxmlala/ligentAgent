@@ -82,8 +82,9 @@ class PPOAgent:
     
     @torch.no_grad()
     def get_action(self, state, sample=True):
-
-        action, _, = self.actor_net(torch.as_tensor(state, dtype=torch.float32).to(self.device), sample=sample)
+        state_img, state_text = state
+        state_feature = self.feature_net(state_img, state_text)
+        action, _, = self.actor_net(torch.as_tensor(state_feature, dtype=torch.float32).to(self.device), sample=sample)
         return action.cpu().numpy()
 
     @torch.no_grad()
