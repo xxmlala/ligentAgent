@@ -65,7 +65,7 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
     # )
     # env = gym.vector.SyncVectorEnv([make_env] * cfg.vec_envs) if cfg.vec_envs > 1 else make_env()
     env = ligent.Environment(path="/home/liuan/workspace/drl_project/ligent-linux-server/LIGENT.x86_64")
-    env_decoder = ComeHereEnv(distance_reward=10, distance_min=1.2, episode_len=500)
+    env_decoder = ComeHereEnv(distance_reward=10, success_reward=200, distance_min=1.2, episode_len=500)
     action_decoder = instantiate(cfg.action_decoder, device=device)
     other_utils.set_seed_everywhere(env, seed)
 
@@ -178,7 +178,7 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
                     logger.info(f'Seed: {seed}, Save best model at eval mean {best_reward:.4f} and step {step}')
                 else:
                     logger.info(f'Seed: {seed}, Save best model at eval mean {best_reward:.4f} and step {step}')
-                agent.save(f'best_model_seed_{seed}.pt')
+                agent.save(f'best_model_seed_{seed}_')
             just_evaluated = True
             
         
@@ -187,8 +187,10 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
             plot_cond = step > cfg.vec_envs + 1 and np.any(np.arange(step - cfg.vec_envs, step) % cfg.plot_interval == 0)
         if plot_cond:
             other_utils.sync_and_visualize(log_dict, local_log_dict, barrier, idx, step, f'{agent} with {buffer}', using_mp)
-
-    agent.save(f'final_model_seed_{seed}.pt')
+        if step%10000==0:
+            agent.save(f'step_{step}_model_seed_{seed}_')
+            logger.info(f'Seed: {seed}, Save step_{step} model!')
+    agent.save(f'final_model_seed_{seed}_')
     other_utils.sync_and_visualize(log_dict, local_log_dict, barrier, idx, step, f'{agent} with {buffer}', using_mp)
 
     # env = RecordVideo(eval_env, f'final_videos_seed_{seed}', name_prefix='eval', episode_trigger=lambda x: x % 3 == 0 and x < cfg.eval_episodes, disable_logger=True)
