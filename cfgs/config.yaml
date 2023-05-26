@@ -21,8 +21,8 @@ train:
   vec_envs: ${vec_envs}
   timesteps: 3_000_000
   batch_size: 512
-  plot_interval: 1024
-  eval_interval: 1024
+  plot_interval: 4096
+  eval_interval: 4096
   eval_episodes: 5
   ppo_update_interval: ${buffer.capacity}
 
