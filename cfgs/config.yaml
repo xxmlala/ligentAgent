@@ -21,8 +21,8 @@ train:
   vec_envs: ${vec_envs}
   timesteps: 3_000_000
   batch_size: 512
-  plot_interval: 1024
-  eval_interval: 1024
+  plot_interval: 4096
+  eval_interval: 4096
   eval_episodes: 5
   ppo_update_interval: ${buffer.capacity}
 
@@ -45,7 +45,7 @@ buffer:
 action_decoder:
   _target_: agent.action_decoder.ActionDecoder
   decode_idx: 6
-  action_used_dims: 7
+  action_used_dims: 1
   action_env_dims: 520
   
 
