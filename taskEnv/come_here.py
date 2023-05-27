@@ -56,7 +56,7 @@ class ComeHereEnv:
             self._stay_static_steps += 1
         else:
             self._stay_static_steps = 0
-        blocked = self._stay_static_steps >= 10
+        blocked = self._stay_static_steps >= 15
         self._last_distance = distance_current
 
         d_min_t = min(self._gotten_min_distance, distance_current)

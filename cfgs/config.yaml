@@ -45,7 +45,7 @@ buffer:
 action_decoder:
   _target_: agent.action_decoder.ActionDecoder
   decode_idx: 6
-  action_used_dims: 7
+  action_used_dims: 1
   action_env_dims: 520
   
 

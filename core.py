@@ -43,7 +43,7 @@ def eval(env, agent, episodes, seed, action_decoder, env_decoder):
         while not (done or blocked):
             state_img = np.expand_dims(state_img, 0)
             state_text = np.expand_dims(state_text, 0)
-            action = agent.get_action((state_img,state_text), sample=False).squeeze(0)
+            action = agent.get_action((state_img,state_text), sample=False)
             action_env = action_decoder.decode(action)
             # state, _, _, info = env.step(action_env)
             (state_img, state_text), _, _, info = env.step(**action_env)
@@ -72,7 +72,7 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
     # )
     # env = gym.vector.SyncVectorEnv([make_env] * cfg.vec_envs) if cfg.vec_envs > 1 else make_env()
     env = ligent.Environment(path="/home/liuan/workspace/drl_project/ligent-linux-server/LIGENT.x86_64")
-    env_decoder = ComeHereEnv(distance_reward=10, success_reward=200, distance_min=1.2, step_penalty=1, episode_len=100)
+    env_decoder = ComeHereEnv(distance_reward=10, success_reward=200, distance_min=1.2, step_penalty=1, episode_len=150)
     action_decoder = instantiate(cfg.action_decoder, device=device)
     other_utils.set_seed_everywhere(env, seed)
 
@@ -122,7 +122,7 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
             env_decoder.reset()
             print(f"It gets {round(cumulate_reward,3)} sum reward, costs {elspsed_step} steps!")
             last_reset_time = time.time()
-            done, truncated = False, False
+            done, blocked = False, False
             # other_utils.write_to_dict(local_log_dict, 'train_returns', info['episode']['r'].item(), using_mp)
             other_utils.write_to_dict(local_log_dict, 'train_returns', round(cumulate_reward/elspsed_step,3), using_mp)
             other_utils.write_to_dict(local_log_dict, 'train_steps', step - 1, using_mp)
@@ -146,7 +146,7 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
             buffer.add((state, action, reward, next_state, int(done)))
         state = next_state
 
-        if step > cfg.batch_size + cfg.nstep:
+        if step >= cfg.batch_size + cfg.nstep:
             if isinstance(buffer, PrioritizedReplayBuffer):
                 batch, weights, tree_idxs = buffer.sample(cfg.batch_size)
                 ret_dict = agent.update(batch, weights=weights)
