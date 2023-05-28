@@ -29,6 +29,7 @@ class MultiCategoricalActor(nn.Module):
                 hidden_depth=hidden_depth,
                 activation=activation,
                 norm_type=None,
+                add_input_activation=True #we assume feature_net's output is not activated
             ).to(device)
             self.mlps.append(net)
         self._action_dim = action_dim

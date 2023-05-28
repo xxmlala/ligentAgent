@@ -21,7 +21,7 @@ class SimpleCNNEncoder(nn.Module):
     def forward(self, x):
         x = torch.as_tensor(x, device=self.device).to(torch.float32)
         x = x.transpose(-3,-1)
-        x /= 255
+        x = x/255
         x = self.conv1(x)
         x = self.activation(x)
         x = self.pool(x)
@@ -56,6 +56,7 @@ class FeatureFusion(nn.Module):
     def __init__(self, hidden_depth, text_input_size:int, text_hidden_size:int, img_input_size:list[int], img_hidden_size:int, 
                    device, text_encoder:nn.Module=DummyTextEncoder, img_encoder:nn.Module=SimpleCNNEncoder):
         super().__init__()
+        self.device = device
         self.text_encoder = text_encoder(text_input_size, text_hidden_size, device).to(device)
         self.img_encoder = img_encoder(img_input_size, img_hidden_size, device).to(device)
         self.text_output_size = text_hidden_size
@@ -82,9 +83,11 @@ class FeatureFusion(nn.Module):
     def forward(self, obs_img, obs_text):
         state_img = self.img_encoder(obs_img)
         state_text = self.text_encoder(obs_text)
+        # state_text = torch.zeros((obs_img.shape[0], self.text_output_size), device=self.device, requires_grad=False)
         # if self.text_encoder is None:
         #     if len(state_img.shape)==2:
         #         state_text = torch.zeros((len(state_img), self.text_output_size))
         #     else:
         #         state_text = torch.zeros(self.text_output_size)
-        return self._head(torch.concat([state_img, state_text], dim=-1))
+        state = self._head(torch.concat([state_img, state_text], dim=-1))
+        return state
