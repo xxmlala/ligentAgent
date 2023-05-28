@@ -233,3 +233,9 @@ class PPOAgent:
         self.value_net.load_state_dict(torch.load(os.path.join('models', name_prefix + 'value.pt')))
         self.actor_net.load_state_dict(torch.load(os.path.join('models', name_prefix + 'actor.pt')))
         self.feature_net.load_state_dict(torch.load(os.path.join('models', name_prefix + 'feature.pt')))
+    
+    def load_in_windows(self, name_prefix):
+        print(os.getcwd())
+        self.value_net.load_state_dict(torch.load(name_prefix + 'value.pt'))
+        self.actor_net.load_state_dict(torch.load(name_prefix + 'actor.pt'))
+        self.feature_net.load_state_dict(torch.load(name_prefix + 'feature.pt'))
