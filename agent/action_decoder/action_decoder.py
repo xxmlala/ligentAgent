@@ -22,13 +22,45 @@ class ActionDecoder:
         #     "grab": bool(action_code[5]),
         #     "speak": "Hello!" if action_code[6]==1 else "",
         # }
-        action_env = { 
-            "move_right": 0,
-            "move_forward": action_code[0],
-            "look_yaw": (1-action_code[0])*30,
-            "look_pitch": 0,
-            "jump": 0,
-            "grab": 0,
-            "speak": ""
-        }
+        # action_env = { 
+        #     "move_right": 0,
+        #     "move_forward": action_code[0],
+        #     "look_yaw": (1-action_code[0])*30,
+        #     "look_pitch": 0,
+        #     "jump": 0,
+        #     "grab": 0,
+        #     "speak": ""
+        # }
+        if action_used[0] == 1:
+            action_env = { 
+                "move_right": 0,
+                "move_forward": 1,
+                "look_yaw": 0,
+                "look_pitch": 0,
+                "jump": False,
+                "grab": False,
+                "speak": "",
+            }
+        elif action_used[0] == 2:
+            action_env = { 
+                "move_right": 0,
+                "move_forward": 0,
+                "look_yaw": 30,
+                "look_pitch": 0,
+                "jump": False,
+                "grab": False,
+                "speak": "",
+            }
+        elif action_used[0] == 0:
+            action_env = { 
+                "move_right": 0,
+                "move_forward": 0,
+                "look_yaw": -30,
+                "look_pitch": 0,
+                "jump": False,
+                "grab": False,
+                "speak": "",
+            }
+        else:
+            raise Exception
         return action_env

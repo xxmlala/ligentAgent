@@ -58,6 +58,11 @@ class PPOAgent:
     #     }
     #     for module, gain in module_gains.items():
     #         module.apply(partial(self.init_weights, gain=gain))
+    def get_actor_net(self):
+        return self.actor_net
+    
+    def get_feature_net(self):
+        return self.feature_net
 
     @staticmethod
     def init_weights(module: nn.Module, gain: float = 1) -> None:

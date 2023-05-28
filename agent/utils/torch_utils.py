@@ -117,13 +117,22 @@ def get_activation(activation: str | Callable | None) -> Callable:
         return nn.Identity
     elif callable(activation):
         return activation
+    # ACT_LAYER = {
+    #     "tanh": nn.Tanh,
+    #     "relu": lambda: nn.ReLU(inplace=True),
+    #     "leaky_relu": lambda: nn.LeakyReLU(inplace=True),
+    #     "swish": lambda: nn.SiLU(inplace=True),  # SiLU is alias for Swish
+    #     "sigmoid": nn.Sigmoid,
+    #     "elu": lambda: nn.ELU(inplace=True),
+    #     "gelu": nn.GELU,
+    # }
     ACT_LAYER = {
         "tanh": nn.Tanh,
-        "relu": lambda: nn.ReLU(inplace=True),
-        "leaky_relu": lambda: nn.LeakyReLU(inplace=True),
-        "swish": lambda: nn.SiLU(inplace=True),  # SiLU is alias for Swish
+        "relu": lambda: nn.ReLU(),
+        "leaky_relu": lambda: nn.LeakyReLU(),
+        "swish": lambda: nn.SiLU(),  # SiLU is alias for Swish
         "sigmoid": nn.Sigmoid,
-        "elu": lambda: nn.ELU(inplace=True),
+        "elu": lambda: nn.ELU(),
         "gelu": nn.GELU,
     }
     activation = activation.lower()

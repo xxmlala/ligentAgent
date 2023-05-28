@@ -72,7 +72,7 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
     # )
     # env = gym.vector.SyncVectorEnv([make_env] * cfg.vec_envs) if cfg.vec_envs > 1 else make_env()
     env = ligent.Environment(path="/home/liuan/workspace/drl_project/ligent-linux-server/LIGENT.x86_64")
-    env_decoder = ComeHereEnv(distance_reward=10, success_reward=200, distance_min=1.2, step_penalty=1, episode_len=150)
+    env_decoder = ComeHereEnv(distance_reward=10, success_reward=200, distance_min=1.2, step_penalty=1, episode_len=500, is_debug=True)
     action_decoder = instantiate(cfg.action_decoder, device=device)
     other_utils.set_seed_everywhere(env, seed)
 
@@ -120,7 +120,7 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
             just_evaluated = False
             state = env.reset()
             env_decoder.reset()
-            print(f"It gets {round(cumulate_reward,3)} sum reward, costs {elspsed_step} steps!")
+            print(f"It gets {round(cumulate_reward,3)} sum reward, costs {elspsed_step} steps, distance_info: {distance_info}")
             last_reset_time = time.time()
             done, blocked = False, False
             # other_utils.write_to_dict(local_log_dict, 'train_returns', info['episode']['r'].item(), using_mp)
@@ -135,7 +135,7 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
         action_env = action_decoder.decode(action)
         # next_state, reward, done, truncated, info = env.step(action)
         next_state, reward, done, info = env.step(**action_env)
-        reward, done, blocked, cumulate_reward, elspsed_step = env_decoder.step(info)
+        reward, done, blocked, cumulate_reward, elspsed_step, distance_info = env_decoder.step(info)
         if isinstance(buffer, PPOReplayBuffer):
             value = agent.get_value(state)
             if cfg.vec_envs > 1 and done.any(): # won't be exectued
