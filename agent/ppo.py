@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class PPOAgent:
     def __init__(self, preprocess_net:nn.Module, action_dims, hidden_dim, hidden_depth, lr, gamma,
-                 tau, nstep, device, clip_range=0.2, value_clip_range=None,
+                 tau, nstep, device, policy_freeze=False, clip_range=0.2, value_clip_range=None,
                  value_coef=0.5, entropy_coef=0.01, update_epochs=10, mini_batch_size=512, **args):
         '''
         preprocess_net: features.
@@ -29,9 +29,10 @@ class PPOAgent:
         self.feature_net = preprocess_net
         self.value_net =  ValueNet(self.feature_net.output_dim, hidden_dim, hidden_depth, self.device)
         self.actor_net = MultiCategoricalActor(self.feature_net.output_dim, action_dims, hidden_dim, hidden_depth, device=self.device)
-
-        self.parameters = list(self.feature_net.parameters()) + list(self.actor_net.parameters()) + list(self.value_net.parameters())
-
+        if not policy_freeze:
+            self.parameters = list(self.feature_net.parameters()) + list(self.actor_net.parameters()) + list(self.value_net.parameters())
+        else:
+            self.parameters = list(self.value_net.parameters())
         self.optimizer = torch.optim.Adam(self.parameters, lr=lr, eps=1e-5)  # PPO impl. trick
     
         self.tau = tau
@@ -234,8 +235,9 @@ class PPOAgent:
         self.actor_net.load_state_dict(torch.load(os.path.join('models', name_prefix + 'actor.pt')))
         self.feature_net.load_state_dict(torch.load(os.path.join('models', name_prefix + 'feature.pt')))
     
-    def load_in_windows(self, name_prefix):
+    def load_full_path(self, name_prefix, load_value_net=True):
         print(os.getcwd())
-        self.value_net.load_state_dict(torch.load(name_prefix + 'value.pt'))
+        if load_value_net:
+            self.value_net.load_state_dict(torch.load(name_prefix + 'value.pt'))
         self.actor_net.load_state_dict(torch.load(name_prefix + 'actor.pt'))
         self.feature_net.load_state_dict(torch.load(name_prefix + 'feature.pt'))

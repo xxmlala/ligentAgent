@@ -2,7 +2,7 @@ import hydra
 import other_utils
 import torch
 import logging
-from core import train
+from core import train, train_valueNet
 import os
 from pyvirtualdisplay import Display
 
@@ -16,6 +16,7 @@ def main(cfg):
     log_dict = other_utils.get_log_dict(cfg.agent._target_)
     for seed in cfg.seeds:
         train(cfg, seed, log_dict, -1, logger, None)
+        # train_valueNet(cfg, seed, log_dict, -1, logger, None)
 
 
 if __name__ == "__main__":
