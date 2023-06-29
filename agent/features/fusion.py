@@ -48,7 +48,8 @@ class DummyTextEncoder(nn.Module):
         x = torch.as_tensor(x, device=self.device)
         if x.ndim<2:
             x = x.unsqueeze(0)
-        return self.linear(x) * 0
+        return torch.zeros((len(x), self.output_size), device=self.device)
+        # return self.linear(x) * 0
         # return torch.zeros(self.output_size)
 
 

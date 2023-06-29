@@ -16,11 +16,11 @@ class ActionDecoder:
         # action_env = { 
         #     "move_right": action_code[0],
         #     "move_forward": action_code[1],
-        #     "look_yaw": action_code[2]*30 - 180,
-        #     "look_pitch": action_code[3]*15 - 90,
-        #     "jump": bool(action_code[4]),
-        #     "grab": bool(action_code[5]),
-        #     "speak": "Hello!" if action_code[6]==1 else "",
+        #     "look_yaw": (action_code[2]-1)*30,
+        #     "look_pitch": 0,
+        #     "jump": False,
+        #     "grab": False,
+        #     "speak": "",
         # }
         # action_env = { 
         #     "move_right": 0,

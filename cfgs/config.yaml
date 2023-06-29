@@ -21,14 +21,14 @@ train:
   vec_envs: ${vec_envs}
   timesteps: 3_000_000
   batch_size: 512
-  plot_interval: 4096
-  eval_interval: 4096
+  plot_interval: 8192
+  eval_interval: 8192 #4096
   eval_episodes: 5
   ppo_update_interval: ${buffer.capacity}
 
 buffer:
   _target_: buffer.PPOReplayBuffer
-  capacity: 4096 #16384
+  capacity: 12288 #8192 #4096 #16384
   state_img_size: [56, 56, 3]
   state_text_size: 520
   action_size: ${action_decoder.action_used_dims}

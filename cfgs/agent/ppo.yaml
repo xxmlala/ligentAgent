@@ -3,6 +3,7 @@ nstep: ${nstep}
 # action_dims: [3, 4, 13, 13, 2, 2, 2]
 # action_dims: [2] # (foward; rotate 30 degree to right)
 action_dims: [3] #(turn left, forward, turn right)
+# action_dims: [3,2,3]
 hidden_dim: 400 #[300, 400]
 hidden_depth: 3
 gamma: 0.99

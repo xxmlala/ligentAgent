@@ -13,7 +13,8 @@ class ValueNet(nn.Module):
                 hidden_dim=hidden_dim,
                 hidden_depth=hidden_depth,
                 activation=activation,
-                norm_type=None,).to(device)
+                norm_type=None,
+                add_input_activation=True).to(device)
         
     def forward(self, state):
         return self.mlp(state).squeeze()

@@ -8,7 +8,7 @@ import ligent
 from omegaconf import OmegaConf
 from dotmap import DotMap
 from hydra.utils import instantiate
-# from pyvirtualdisplay import Display
+from pyvirtualdisplay import Display
 import other_utils
 import time
 from taskEnv import ComeHereEnv
@@ -43,33 +43,25 @@ def eval_env(env, agent, episodes, seed, action_decoder, env_decoder):
     ligent.set_scenes_dir("")
     return np.mean(returns), np.std(returns), distance_info_s
 
-def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, eval_loader):
-    # env = ligent.Environment(path="/home/liuan/workspace/drl_project/ligent-linux-server/LIGENT.x86_64")
-    # env_decoder = ComeHereEnv(distance_reward=10, success_reward=200, distance_min=1.2, step_penalty=1, episode_len=500, is_debug=True)
-    # action_decoder = instantiate(cfg.action_decoder, device=device)
-    other_utils.set_seed_everywhere("", seed)
-    # eval_env_decoder = ComeHereEnv(distance_reward=10, success_reward=200, distance_min=1.2, step_penalty=1, episode_len=100, is_debug=True)
-    # state_size = other_utils.get_space_shape(env.observation_space, is_vector_env=cfg.vec_envs > 1)
-    # action_size = other_utils.get_space_shape(env.action_space, is_vector_env=cfg.vec_envs > 1)
-
-    feature_net = instantiate(cfg.feature_net, device=device)
-    
-    agent = instantiate(cfg.agent, preprocess_net=feature_net, device=device)
-    cfg = DotMap(OmegaConf.to_container(cfg.train, resolve=True))
-    agent.load('')
-    # model = PolicyNet(feature_net=agent.get_feature_net(), actor_net=agent.get_actor_net())
     
 def test_env(cfg, episodes, models_name):
     # ligent.set_scenes_dir("C:/Users/19355/Desktop/drlProject/LIGENT/custom_scenes")
-    env = ligent.Environment(path="C:/Users/19355/Desktop/drlProject/05272014_fix_multi_rotate/305272014_fix_multi_rotate/LIGENT.exe")
+    ligent.set_scenes_dir("./custom_scenes_test")
+    env = ligent.Environment(path="/home/liuan/workspace/drl_project/ligent-linux-server/LIGENT.x86_64")
     env_decoder = ComeHereEnv(distance_reward=10, success_reward=200, distance_min=1.2, step_penalty=1, episode_len=100, is_debug=True)
     action_decoder = instantiate(cfg.action_decoder, device=device)
     
     feature_net = instantiate(cfg.feature_net, device=device)
     agent = instantiate(cfg.agent, preprocess_net=feature_net, device=device)
     # try: 
-    agent.load_in_windows(models_name)
+    agent.load_full_path(models_name, load_value_net=False)
+
+    returns = []
+    success_num = 0
+    success_distance = 1.2
+    eps = 1e-3
     for episode in range(episodes):
+        print(episode, end=",", flush=True)
         state_img, _ = env.reset()
         state_text = torch.zeros(520)
         env_decoder.reset()
@@ -79,9 +71,16 @@ def test_env(cfg, episodes, models_name):
             action_env = action_decoder.decode(action)
             (state_img, state_text), reward, done, info = env.step(**action_env)
             reward, done, blocked, cumulate_reward, elspsed_step, distance_info = env_decoder.step(info)
+        if distance_info[2] <= eps+success_distance:
+            success_num += 1
+        returns.append(cumulate_reward)
+    print("test completed!")
     # except:
     env.close()
-
+    ligent.set_scenes_dir("")
+    print(f"models: {models_name}")
+    print(returns)
+    print(f"success_rate: {success_num/episodes}, mean reward: {sum(returns)/episodes}.")
 
 @hydra.main(config_path="cfgs", config_name="config", version_base="1.3")
 # def main(cfg, episodes, models_name):
@@ -90,10 +89,13 @@ def main(cfg):
     # log_dict = other_utils.get_log_dict(cfg.agent._target_)
     # for seed in cfg.seeds:
         # with torch.autograd.set_detect_anomaly(True):
-    # train(cfg, seed, log_dict, logger, *(get_dataloader()))
-    test_env(cfg, episodes=10, models_name='C:/Users/19355/Desktop/drlProject/ligentAgent/models/best_acc_')
-    # test_env(cfg, episodes=5, models_name='best_acc_')
-
+    # train(cfg, seed, log_dict, logger, *(get_dataloader())) best_model_seed_3407_actor
+    test_env(cfg, episodes=1000, models_name='/home/liuan/workspace/drl_project/ligentAgent/eval_models/directlyPPO/best_model_seed_3407_')
+    # test_env(cfg, episodes=1000, models_name='/home/liuan/workspace/drl_project/ligentAgent/eval_models/IL_PPO/step_24576_model_seed_3407_')
+    # test_env(cfg, episodes=1000, models_name='/home/liuan/workspace/drl_project/ligentAgent/eval_models/IL_PPO2/step_303104_model_seed_3407_')
+    # start_time = time.time()
+    # test_env(cfg, episodes=1000, models_name='/home/liuan/workspace/drl_project/ligentAgent/eval_models/IL/best_acc_')
+    # print(f"It costs {time.time()-start_time} s!")
 # @hydra.main(config_path="cfgs", config_name="config", version_base="1.3")
 # def main(cfg):
 #     log_dict = other_utils.get_log_dict(cfg.agent._target_)
@@ -105,4 +107,5 @@ def main(cfg):
 
 if __name__=="__main__":
     # main(episodes=5, models_name='best_acc_')
-    main()
+    with Display(visible=False) as disp:
+        main()
