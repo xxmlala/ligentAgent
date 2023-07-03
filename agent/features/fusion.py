@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 # from ..batch import Batch
 from ..utils import build_mlp
-# from mineclip.utils import call_once
+from transformers import CLIPProcessor, CLIPModel
 
 class SimpleCNNEncoder(nn.Module):
     def __init__(self, input_size, output_size, device):
@@ -52,20 +52,51 @@ class DummyTextEncoder(nn.Module):
         # return self.linear(x) * 0
         # return torch.zeros(self.output_size)
 
+class Identity(nn.Module):
+    def __init__(self, input_size, output_size, device):
+        super().__init__()
+        self.device = device
+    
+    def forward(self, x):
+        return x
+
+
+class CLIPWrapper(nn.Module):
+    def __init__(self, device):
+        super().__init__()
+        self.model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+        self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+        self.device = device
+
+    def encode_images(self, images):
+        inputs = self.processor(images = images, return_tensors='pt')
+        return self.model.get_image_features(**inputs).to(self.device)
+
+    def encode_text(self, text):
+        inputs = self.processor(text = text, return_tensors='pt')
+        return self.model.get_text_features(**inputs).to(self.device)
+    
+    def get_params(self):
+        return self.model.parameters()
+
+    def forward(self):
+        pass
 
 class FeatureFusion(nn.Module):
-    def __init__(self, hidden_depth, text_input_size:int, text_hidden_size:int, img_input_size:list[int], img_hidden_size:int, 
-                   device, text_encoder:nn.Module=DummyTextEncoder, img_encoder:nn.Module=SimpleCNNEncoder):
+    def __init__(self, hidden_depth, text_input_size:int, text_hidden_size:int, 
+                 img_input_size:list[int], img_hidden_size:int, fusion_hidden_size:int,
+                   device, text_encoder:nn.Module=Identity, img_encoder:nn.Module=Identity):
         super().__init__()
         self.device = device
         self.text_encoder = text_encoder(text_input_size, text_hidden_size, device).to(device)
         self.img_encoder = img_encoder(img_input_size, img_hidden_size, device).to(device)
         self.text_output_size = text_hidden_size
-        self._output_dim = img_hidden_size + text_hidden_size
+        self._input_dim = img_hidden_size + text_hidden_size
+        self._fusion_hidden_size = fusion_hidden_size
         self._head = build_mlp(
-            input_dim=self._output_dim,
-            hidden_dim=self._output_dim,
-            output_dim=self._output_dim,
+            input_dim=self._input_dim,
+            hidden_dim=self._fusion_hidden_size,
+            output_dim=self._fusion_hidden_size,
             hidden_depth=hidden_depth,
             activation="relu",
             weight_init="orthogonal",
@@ -79,7 +110,7 @@ class FeatureFusion(nn.Module):
         ).to(device)
     @property
     def output_dim(self):
-        return self._output_dim
+        return self._fusion_hidden_size
     
     def forward(self, obs_img, obs_text):
         state_img = self.img_encoder(obs_img)

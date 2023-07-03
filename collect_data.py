@@ -23,12 +23,6 @@ def save_pic(np_arr, pic_path):
     plt.savefig(pic_path,bbox_inches='tight', pad_inches=0, transparent=True) 
     plt.close()
 
-# def degree(a, b):
-#     inner_product = lambda a,b: max(min(a[0]*b[0]+a[1]*b[1], 1), -1)
-#     outer_product = lambda a,b: a[0]*b[1]-a[1]*b[0]
-#     degree = math.acos(inner_product(a, b)) / math.pi * 180
-#     return degree
-
 def distance(a,b):
     return ((a[0]-b[0])**2 + (a[1]-b[1])**2)**0.5
 
@@ -59,18 +53,16 @@ def inference_action(info):
     # outer_product = lambda a,b: a[0]*b[1]-a[1]*b[0]
     # degree = math.acos(inner_product(mate_direction, mate2player)) / math.pi * 180
 
-    def action_encoder(action_inst):
-        inst = np.zeros(1)
-        # inst[1] = action_inst['move_forward']
-        # inst[2] = 1 if action_inst['look_yaw']==30 else 0
-        # inst = action_inst['move_forward'] == 1
-        if action_inst['move_forward']==1:
-            inst = 1
-        elif action_inst['look_yaw'] == 30:
-            inst = 2
-        else:
-            inst = 0
-        return inst
+    action_encoder = {
+        'no_op': 0,
+        'move_forward': 1,
+        'look_yaw_n30d': 2,
+        'look_yaw_p30d': 3,
+        'look_pitch_n30d': 4,
+        'look_pitch_p30d': 5,
+        'is_grab': 6,
+        'is_speak': 7
+    }
 
     if abs(degree) <= 15:
         action_env = {
@@ -82,7 +74,7 @@ def inference_action(info):
             "grab": False,
             "speak": "",
             }
-        action_str = 'forward'
+        action_str = 'move_forward'
     elif degree>=-30 and degree<-15:
         action_env = {
             "move_right": 0,
@@ -93,7 +85,7 @@ def inference_action(info):
             "grab": False,
             "speak": "",
             }
-        action_str = "left30d"
+        action_str = "look_yaw_n30d"
     else:
         action_env = {
             "move_right": 0,
@@ -104,10 +96,11 @@ def inference_action(info):
             "grab": False,
             "speak": "",
             }
-        action_str = 'right30d'
-    return action_env, action_encoder(action_env), action_str
+        action_str = 'look_yaw_p30d'
+    
+    return action_env, action_encoder[action_str], action_str
 
-def collect(env,episodes:int):
+def collect(env,episodes:int, instruction:str="come here"):
     env_decoder = ComeHereEnv(distance_reward=10, success_reward=200, distance_min=1.2, step_penalty=1, episode_len=100, is_debug=True)
 
     action_noop = {
@@ -126,9 +119,17 @@ def collect(env,episodes:int):
 
     with h5py.File('./dataset/Episode1000.h5', 'w') as f:
         data_nums = 0
-        obs_set = f.create_dataset('obs_V', (0,56,56,3), maxshape=(None, 56, 56, 3), dtype='i')
-        action_set = f.create_dataset('action', (0,2), maxshape=(None, 2), dtype='i')
+        fail_nums = 0
+        success_episode, fail_episode = 0,0
+        obs_V_set = f.create_dataset('obs_V', (0,224,224,3), maxshape=(None, 224, 224, 3), dtype='i')
+        obs_T_set = f.create_dataset('obs_T', (0,), maxshape=(None,),dtype=h5py.string_dtype("utf-8")) #TODO 往出拿时需要 “ss”.decode("utf-8")
+        action_set = f.create_dataset('action', (0,), maxshape=(None,),dtype='i')
+        # data_obs_V = []
+        # data_obs_T = []
+        # data_action = []
         for episode in range(episodes):
+            if episode%5==0:
+                print(f"Episode: {episode}/{episodes}")
             path = f"./obs_visions/episode_{episode}"
             if not os.path.exists(path):
                 os.makedirs(path)
@@ -137,22 +138,39 @@ def collect(env,episodes:int):
             done, blocked = False, False
             (state_img, state_text), _, _, info = env.step(**action_noop)
             
+            obs_list = []
+
             while not (done or blocked):
                 last_state_img = state_img
+                last_state_text = state_text
+                last_state_text = instruction
                 action_env, action_code, action_str = inference_action(info)
-                (state_img, _), _, _, info = env.step(**action_env)
+                (state_img, state_text), _, _, info = env.step(**action_env)
                 reward, done, blocked, cumulate_reward, elspsed_step, distance_info = env_decoder.step(info)
-                save_pic(last_state_img, pic_path=path+f'/{elspsed_step:03d}_{action_str}_{round(reward,1)}.png')
+                obs_list.append((last_state_img, last_state_text, action_code, path+f'/{elspsed_step:03d}_{action_str}_{round(reward,1)}.png'))
+
+            obs_list.append((state_img, instruction, 0, path+f'/{elspsed_step+1:03d}_noOp_NULL.png'))
+            if blocked:
+                fail_nums += len(obs_list)
+                fail_episode += 1
+                print(f"BLOCKED_sum: {fail_nums}")
+                continue
+            success_episode += 1
+            for state_img,state_text,action_code,pic_path in obs_list:
                 data_nums += 1
-                obs_set.resize((data_nums, 56,56,3))
-                action_set.resize((data_nums, 2))
-                obs_set[data_nums-1] = last_state_img
+                obs_V_set.resize((data_nums, 224,224,3))
+                obs_T_set.resize((data_nums,))
+                action_set.resize((data_nums,))
+                obs_V_set[data_nums-1] = state_img
+                obs_T_set[data_nums-1] = state_text
                 action_set[data_nums-1] = action_code
+                save_pic(state_img, pic_path=pic_path)
 
             os.rename(path, path + f"_{elspsed_step}_{distance_info}_{cumulate_reward}")
     print(returns)
     env.close()
-
+    print(f"{success_episode} success_episodes, {fail_episode} fail_episodes, {data_nums} data pairs.")
+    
 def debug(env):
     action_noop = {
             "move_right": 0,
@@ -199,12 +217,18 @@ def debug(env):
 
 if __name__ == "__main__":
     
+
+    ligent.set_scenes_dir("")
+    env = ligent.Environment(path="C:/Users/19355/Desktop/drlProject/ligent-windows/06061943_win_224/LIGENT.exe")
+    collect(env,1000)
+    exit(0)
     # with Display(visible=False) as disp:
     try:
         ligent.set_scenes_dir("")
-        env = ligent.Environment(path="C:/Users/19355/Desktop/drlProject/05272014_fix_multi_rotate/305272014_fix_multi_rotate/LIGENT.exe")
-        collect(env,1000)
+        env = ligent.Environment(path="C:/Users/19355/Desktop/drlProject/ligent-windows/06061943_win_224/LIGENT.exe")
+        collect(env,10)
         # debug(env)
     except:
+        print("Some error happened!")
         env.close()
     # debug()

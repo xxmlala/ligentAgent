@@ -29,7 +29,7 @@ train:
 buffer:
   _target_: buffer.PPOReplayBuffer
   capacity: 12288 #8192 #4096 #16384
-  state_img_size: [56, 56, 3]
+  state_img_size: [224, 224, 3]
   state_text_size: 520
   action_size: ${action_decoder.action_used_dims}
   # use_per: False
@@ -53,9 +53,10 @@ feature_net:
   _target_: agent.features.FeatureFusion
   hidden_depth: 2
   text_input_size: ${buffer.state_text_size}
-  text_hidden_size: 10
+  text_hidden_size: 512
   img_input_size: ${buffer.state_img_size}
-  img_hidden_size: 128
+  img_hidden_size: 512
+  fusion_hidden_size: 512
 
 hydra:
   job:

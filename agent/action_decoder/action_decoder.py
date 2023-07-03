@@ -31,7 +31,17 @@ class ActionDecoder:
         #     "grab": 0,
         #     "speak": ""
         # }
-        if action_used[0] == 1:
+        if action_used[0] == 0:
+            action_env = { 
+                "move_right": 0,
+                "move_forward": 0,
+                "look_yaw": 0,
+                "look_pitch": 0,
+                "jump": False,
+                "grab": False,
+                "speak": "",
+            }
+        elif action_used[0] == 1:
             action_env = { 
                 "move_right": 0,
                 "move_forward": 1,
@@ -45,17 +55,17 @@ class ActionDecoder:
             action_env = { 
                 "move_right": 0,
                 "move_forward": 0,
-                "look_yaw": 30,
+                "look_yaw": -30,
                 "look_pitch": 0,
                 "jump": False,
                 "grab": False,
                 "speak": "",
             }
-        elif action_used[0] == 0:
+        elif action_used[0] == 3:
             action_env = { 
                 "move_right": 0,
                 "move_forward": 0,
-                "look_yaw": -30,
+                "look_yaw": 30,
                 "look_pitch": 0,
                 "jump": False,
                 "grab": False,
