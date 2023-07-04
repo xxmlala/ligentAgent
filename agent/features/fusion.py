@@ -64,16 +64,18 @@ class Identity(nn.Module):
 class CLIPWrapper(nn.Module):
     def __init__(self, device):
         super().__init__()
-        self.model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+        self.model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device)
         self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
         self.device = device
 
     def encode_images(self, images):
         inputs = self.processor(images = images, return_tensors='pt')
+        inputs = {i: inputs[i].to(self.device) for i in inputs}
         return self.model.get_image_features(**inputs).to(self.device)
 
     def encode_text(self, text):
         inputs = self.processor(text = text, return_tensors='pt')
+        inputs = {i: inputs[i].to(self.device) for i in inputs}
         return self.model.get_text_features(**inputs).to(self.device)
     
     def get_params(self):
