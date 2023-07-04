@@ -5,3 +5,6 @@ dataset
 models
 eval_models
 debug.ipynb
+env_config.json
+game_states.json
+last_scene.json

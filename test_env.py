@@ -12,6 +12,7 @@ from pyvirtualdisplay import Display
 import other_utils
 import time
 from taskEnv import ComeHereEnv
+from agent.features import CLIPWrapper
 
 logger = logging.getLogger(__name__)
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -46,8 +47,9 @@ def eval_env(env, agent, episodes, seed, action_decoder, env_decoder):
     
 def test_env(cfg, episodes, models_name):
     # ligent.set_scenes_dir("C:/Users/19355/Desktop/drlProject/LIGENT/custom_scenes")
-    ligent.set_scenes_dir("./custom_scenes_test")
-    env = ligent.Environment(path="/home/liuan/workspace/drl_project/ligent-linux-server/LIGENT.x86_64")
+    # ligent.set_scenes_dir("./custom_scenes_test")
+    env = ligent.Environment(path="C:/Users/19355/Desktop/drlProject/ligent-windows/06061943_win_224/LIGENT.exe")
+    # env = ligent.Environment(path="/home/liuan/workspace/drl_project/ligent-linux-server/LIGENT.x86_64")
     env_decoder = ComeHereEnv(distance_reward=10, success_reward=200, distance_min=1.2, step_penalty=1, episode_len=100, is_debug=True)
     action_decoder = instantiate(cfg.action_decoder, device=device)
     
@@ -60,14 +62,17 @@ def test_env(cfg, episodes, models_name):
     success_num = 0
     success_distance = 1.2
     eps = 1e-3
+    clip_encoder = CLIPWrapper(device)
+
     for episode in range(episodes):
         print(episode, end=",", flush=True)
         state_img, _ = env.reset()
-        state_text = torch.zeros(520)
+        # state_text = torch.zeros(520)
+        state_text = ""
         env_decoder.reset()
         blocked, done = False, False
         while not(done or blocked):
-            action = agent.get_action((state_img, state_text), sample=False)
+            action = agent.get_action((clip_encoder.encode_images(state_img), clip_encoder.encode_text(state_text)), sample=False)
             action_env = action_decoder.decode(action)
             (state_img, state_text), reward, done, info = env.step(**action_env)
             reward, done, blocked, cumulate_reward, elspsed_step, distance_info = env_decoder.step(info)
@@ -90,8 +95,8 @@ def main(cfg):
     # for seed in cfg.seeds:
         # with torch.autograd.set_detect_anomaly(True):
     # train(cfg, seed, log_dict, logger, *(get_dataloader())) best_model_seed_3407_actor
-    test_env(cfg, episodes=1000, models_name='/home/liuan/workspace/drl_project/ligentAgent/eval_models/directlyPPO/best_model_seed_3407_')
-    # test_env(cfg, episodes=1000, models_name='/home/liuan/workspace/drl_project/ligentAgent/eval_models/IL_PPO/step_24576_model_seed_3407_')
+    # test_env(cfg, episodes=1000, models_name='/home/liuan/workspace/drl_project/ligentAgent/eval_models/directlyPPO/best_model_seed_3407_')
+    test_env(cfg, episodes=1000, models_name='C:/Users/19355/Desktop/drlProject/ligentAgent/models/best_acc_')
     # test_env(cfg, episodes=1000, models_name='/home/liuan/workspace/drl_project/ligentAgent/eval_models/IL_PPO2/step_303104_model_seed_3407_')
     # start_time = time.time()
     # test_env(cfg, episodes=1000, models_name='/home/liuan/workspace/drl_project/ligentAgent/eval_models/IL/best_acc_')
@@ -107,5 +112,5 @@ def main(cfg):
 
 if __name__=="__main__":
     # main(episodes=5, models_name='best_acc_')
-    with Display(visible=False) as disp:
-        main()
+    # with Display(visible=False) as disp:
+    main()
