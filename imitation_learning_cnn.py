@@ -18,7 +18,7 @@ from tqdm import tqdm
 import other_utils
 import time
 from env_dataset import EnvDataset
-from agent.features import CLIPWrapper
+from agent.features import CLIPWrapper, Identity, SimpleCNNEncoder
 from sklearn.metrics import confusion_matrix, balanced_accuracy_score
 
 
@@ -64,7 +64,7 @@ def eval(model, data_loader, criterion, clip_encoder=None):
     for obs_Vs,obs_Ts, labels in tqdm(data_loader):
         # obs_T = torch.zeros((len(obs_Vs), 520), device=device)
         
-        logits = model(clip_encoder.encode_images(obs_Vs), clip_encoder.encode_text(obs_Ts))
+        logits = model(obs_Vs, clip_encoder.encode_text(obs_Ts))
         labels = labels.type(torch.LongTensor).to(device)
         loss = criterion(logits, labels)
         total_loss += loss.item()
@@ -85,7 +85,7 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
     # env_decoder = ComeHereEnv(distance_reward=10, success_reward=200, distance_min=1.2, step_penalty=1, episode_len=500, is_debug=True)
     # action_decoder = instantiate(cfg.action_decoder, device=device)
     other_utils.set_seed_everywhere("", seed)
-    feature_net = instantiate(cfg.feature_net, device=device)
+    feature_net = instantiate(cfg.feature_net, device=device, text_encoder=Identity, img_encoder=SimpleCNNEncoder)
     agent = instantiate(cfg.agent, preprocess_net=feature_net, device=device)
     cfg = DotMap(OmegaConf.to_container(cfg.train, resolve=True))
 
@@ -95,8 +95,7 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
 
     clip_encoder = CLIPWrapper(device)
     clip_prameters = clip_encoder.get_params()
-    clip_vit_parameters = clip_encoder.get_vit_params()
-    optimizer = optim.Adam(list(model.parameters()) + clip_vit_parameters, lr=3e-4)
+    optimizer = optim.Adam(list(model.parameters()), lr=3e-4)
     # optimizer = optim.Adam(list(clip_prameters), lr=3e-4)
     # optimizer = optim.Adam(list(model.parameters()), lr=3e-4)
     best_eval_acc = 0
@@ -111,7 +110,7 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
         for obs_V,obs_T, labels in tqdm(train_loader):
             optimizer.zero_grad()
             # obs_T = torch.zeros((len(obs_V), 520), device=device)
-            outputs = model(clip_encoder.encode_images(obs_V), clip_encoder.encode_text(obs_T))
+            outputs = model(obs_V, clip_encoder.encode_text(obs_T))
             _,t_predictions = torch.max(outputs,-1)
             train_predictions.extend(t_predictions.cpu().numpy())
             labels = labels.type(torch.LongTensor).to(device)
@@ -124,7 +123,7 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
             # break
         train_accuracy = balanced_accuracy_score(y_true=train_labels, y_pred=train_predictions)
         eval_loss, eval_acc, c_matrix = eval(model, eval_loader, criterion=criterion, clip_encoder=clip_encoder)
-        logger.info(f'epoch [{epoch_cnt}] training_loss: {running_loss / len(train_loader):.3f}, eval_loss: {eval_loss}, training_balanced_acc: {train_accuracy}, eval_balanced_acc: {eval_acc}')
+        logger.info(f'epoch [{epoch_cnt}] training_loss: {running_loss / len(train_loader):.3f}, eval_loss: {eval_loss}, training_balanced_acc: {train_accuracy}, eval_acc: {eval_acc}')
         logger.info(f'confusion_matrix:\n{c_matrix}')
         running_loss = 0.0
         
