@@ -6,8 +6,10 @@ class ComeHereEnv:
         distance_min: float | int,
         step_penalty: float | int,
         episode_len,
+        goal_object: str='',
         is_debug=False
     ):
+        self._goal_object = goal_object
         self._episode_len = episode_len
         self._distance_reward = distance_reward
         self._success_reward = success_reward
@@ -36,11 +38,21 @@ class ComeHereEnv:
     def step(self, info):
         self._elapsed_step += 1
 
-        position_player = info['game_states']['player']['position']
         position_mate = info['game_states']['playmate']['position']
 
-        face_direction_player = info['game_states']['player']['forward']
-        face_direction_mate = info['game_states']['playmate']['forward']
+        if self._goal_object=='player':
+            position_player = info['game_states']['player']['position']
+        else:
+            instances_list = [i['prefab'].split('_')[1] for i in info['game_states']['instances']]
+            goal_object_ids = []
+            for i,instance in enumerate(instances_list):
+                if instance==self._goal_object:
+                    goal_object_ids.append(i)
+            assert len(goal_object_ids)==1,f"len(collect_object_idx) is {len(goal_object_ids)}, goal={self._goal_object}"
+            goal_object_id = goal_object_ids[0]
+            position_player = info['game_states']['instances'][goal_object_id]['position']
+        # face_direction_player = info['game_states']['player']['forward']
+        # face_direction_mate = info['game_states']['playmate']['forward']
 
         def get_distance(player:dict, mate:dict):
             distance = ((player['x']-mate['x'])**2 + (player['z']-mate['z'])**2) ** 0.5

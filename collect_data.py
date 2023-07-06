@@ -26,12 +26,23 @@ def save_pic(np_arr, pic_path):
 def distance(a,b):
     return ((a[0]-b[0])**2 + (a[1]-b[1])**2)**0.5
 
-def inference_action(info):
-    position_player = info['game_states']['player']['position']
+def inference_action(info, collect_object:str='player'):
     position_mate = info['game_states']['playmate']['position']
-
-    face_direction_player = info['game_states']['player']['forward']
     face_direction_mate = info['game_states']['playmate']['forward']
+
+    if collect_object=='player':
+        position_player = info['game_states']['player']['position']
+        face_direction_player = info['game_states']['player']['forward']
+    else:
+        instances_list = [i['prefab'].split('_')[1] for i in info['game_states']['instances']]
+        collect_object_ids = []
+        for i,instance in enumerate(instances_list):
+            if instance==collect_object:
+                collect_object_ids.append(i)
+        assert len(collect_object_ids)==1,f"len(collect_object_idx) is {len(collect_object_ids)}"
+        collect_object_id = collect_object_ids[0]
+        position_player = info['game_states']['instances'][collect_object_id]['position']
+        face_direction_player = info['game_states']['instances'][collect_object_id]['forward']
 
     mate2player = np.array([position_player['x']-position_mate['x'], position_player['z']-position_mate['z']])
     mate2player /= (mate2player[0]**2 + mate2player[1]**2)**0.5
@@ -54,14 +65,14 @@ def inference_action(info):
     # degree = math.acos(inner_product(mate_direction, mate2player)) / math.pi * 180
 
     action_encoder = {
-        'no_op': 0,
-        'move_forward': 1,
-        'look_yaw_n30d': 2,
-        'look_yaw_p30d': 3,
-        'look_pitch_n30d': 4,
-        'look_pitch_p30d': 5,
-        'is_grab': 6,
-        'is_speak': 7
+        # 'no_op': 0,
+        'move_forward': 0,
+        'look_yaw_n30d': 1,
+        'look_yaw_p30d': 2,
+        'look_pitch_n30d': 3,
+        'look_pitch_p30d': 4,
+        'is_grab': 5,
+        'is_speak': 6
     }
 
     if abs(degree) <= 15:
@@ -100,8 +111,14 @@ def inference_action(info):
     
     return action_env, action_encoder[action_str], action_str
 
-def collect(env,episodes:int, instruction:str="come here"):
-    env_decoder = ComeHereEnv(distance_reward=10, success_reward=200, distance_min=1.2, step_penalty=1, episode_len=100, is_debug=True)
+def collect(env,episodes:int, collect_object:str='player'):
+    if not (collect_object == 'player'):
+        instruction = f"come to the {collect_object}"
+    else:
+        instruction = "come here"
+    
+    print(f"instruction: {instruction}")
+    env_decoder = ComeHereEnv(goal_object=collect_object,distance_reward=10, success_reward=200, distance_min=1.2, step_penalty=1, episode_len=100, is_debug=True)
 
     action_noop = {
             "move_right": 0,
@@ -117,7 +134,7 @@ def collect(env,episodes:int, instruction:str="come here"):
     if not os.path.exists('./dataset'):
         os.makedirs('./dataset')
 
-    with h5py.File('./dataset/Episode1000.h5', 'w') as f:
+    with h5py.File(f'./dataset/Episode1000_{collect_object}.h5', 'w') as f:
         data_nums = 0
         fail_nums = 0
         success_episode, fail_episode = 0,0
@@ -130,7 +147,7 @@ def collect(env,episodes:int, instruction:str="come here"):
         for episode in range(episodes):
             if episode%5==0:
                 print(f"Episode: {episode}/{episodes}")
-            path = f"./obs_visions/episode_{episode}"
+            path = f"./obs_visions_{collect_object}/episode_{episode}"
             if not os.path.exists(path):
                 os.makedirs(path)
             state_img, _ = env.reset()
@@ -144,12 +161,12 @@ def collect(env,episodes:int, instruction:str="come here"):
                 last_state_img = state_img
                 last_state_text = state_text
                 last_state_text = instruction
-                action_env, action_code, action_str = inference_action(info)
+                action_env, action_code, action_str = inference_action(info, collect_object=collect_object)
                 (state_img, state_text), _, _, info = env.step(**action_env)
                 reward, done, blocked, cumulate_reward, elspsed_step, distance_info = env_decoder.step(info)
                 obs_list.append((last_state_img, last_state_text, action_code, path+f'/{elspsed_step:03d}_{action_str}_{round(reward,1)}.png'))
 
-            obs_list.append((state_img, instruction, 0, path+f'/{elspsed_step+1:03d}_noOp_NULL.png'))
+            # obs_list.append((state_img, instruction, 0, path+f'/{elspsed_step+1:03d}_noOp_NULL.png'))
             if blocked:
                 fail_nums += len(obs_list)
                 fail_episode += 1
@@ -162,7 +179,7 @@ def collect(env,episodes:int, instruction:str="come here"):
                 obs_T_set.resize((data_nums,))
                 action_set.resize((data_nums,))
                 obs_V_set[data_nums-1] = state_img
-                obs_T_set[data_nums-1] = state_text
+                obs_T_set[data_nums-1] = instruction#state_text
                 action_set[data_nums-1] = action_code
                 save_pic(state_img, pic_path=pic_path)
 
@@ -220,7 +237,7 @@ if __name__ == "__main__":
 
     ligent.set_scenes_dir("")
     env = ligent.Environment(path="C:/Users/19355/Desktop/drlProject/ligent-windows/06061943_win_224/LIGENT.exe")
-    collect(env,1000)
+    collect(env,1000, collect_object='ChristmasTree')
     exit(0)
     # with Display(visible=False) as disp:
     try:
