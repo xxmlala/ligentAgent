@@ -84,6 +84,7 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
     # env = ligent.Environment(path="/home/liuan/workspace/drl_project/ligent-linux-server/LIGENT.x86_64")
     # env_decoder = ComeHereEnv(distance_reward=10, success_reward=200, distance_min=1.2, step_penalty=1, episode_len=500, is_debug=True)
     # action_decoder = instantiate(cfg.action_decoder, device=device)
+    logger.info(f"Model: CNN")
     other_utils.set_seed_everywhere("", seed)
     feature_net = instantiate(cfg.feature_net, device=device, text_encoder=Identity, img_encoder=SimpleCNNEncoder)
     agent = instantiate(cfg.agent, preprocess_net=feature_net, device=device)
@@ -91,7 +92,9 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
 
     model = PolicyNet(feature_net=agent.get_feature_net(), actor_net=agent.get_actor_net())
     # criterion = nn.CrossEntropyLoss(weight=torch.as_tensor([29.7,1.5,16.0,4.5], device=device))
-    criterion = nn.CrossEntropyLoss(weight=torch.as_tensor([1.4,15.4,4.4], device=device))
+    # criterion = nn.CrossEntropyLoss(weight=torch.as_tensor([1.4,15.4,4.4], device=device)) #Come here
+    # criterion = nn.CrossEntropyLoss(weight=torch.as_tensor([1.4,15.1,4.2], device=device)) #Come to the christmas tree
+    criterion = nn.CrossEntropyLoss(weight=torch.as_tensor([1.4,15.1,4.2], device=device)) #Come here + christmas tree
 
     clip_encoder = CLIPWrapper(device)
     clip_prameters = clip_encoder.get_params()
@@ -99,6 +102,7 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
     # optimizer = optim.Adam(list(clip_prameters), lr=3e-4)
     # optimizer = optim.Adam(list(model.parameters()), lr=3e-4)
     best_eval_acc = 0
+    best_eval_train_acc = -1
     not_ascending_epoch = 0
     epoch_cnt = 0
     while True:
@@ -132,14 +136,18 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
             best_eval_acc = eval_acc
             not_ascending_epoch = 0
             agent.save(f'best_acc_')
+            best_eval_train_acc = train_accuracy
+            logger.info(f'Save best acc model, best_eval_acc={best_eval_acc}, train_acc={train_accuracy}')
         else:
             not_ascending_epoch += 1
         
         if not_ascending_epoch >= 5:
             break
+    logger.info(f'Finish training with best_eval_acc ({best_eval_acc}) and corresponding train_acc {best_eval_train_acc}.')
 
+def get_dataloader(logger, f_path="/home/liuan/workspace/drl_project/ligentAgent/dataset/Episode1000_ChristmasTree.h5", batch_size=256):
 
-def get_dataloader(f_path="/home/liuan/workspace/drl_project/ligentAgent/dataset/Cls3Episode1000.h5", batch_size=256):
+    logger.info(f'DataSet: {f_path.split("/")[-1]}')
     with h5py.File(f_path, 'r') as f:
         # Get the datasets
         obs_V_dataset = f['obs_V']
@@ -175,7 +183,7 @@ def main(cfg):
     log_dict = other_utils.get_log_dict(cfg.agent._target_)
     for seed in cfg.seeds:
         with torch.autograd.set_detect_anomaly(True):
-            train(cfg, seed, log_dict, logger, *(get_dataloader(batch_size=256)))
+            train(cfg, seed, log_dict, logger, *(get_dataloader(logger=logger,batch_size=256,f_path="/home/liuan/workspace/drl_project/ligentAgent/dataset/Come2TreeHereEpisode1000.h5")))
     
 
 

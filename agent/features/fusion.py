@@ -74,7 +74,7 @@ class CLIPWrapper(nn.Module):
         return self.model.get_image_features(**inputs).to(self.device)
 
     def encode_text(self, text):
-        inputs = self.processor(text = text, return_tensors='pt')
+        inputs = self.processor(text = text, padding=True, return_tensors='pt')
         inputs = {i: inputs[i].to(self.device) for i in inputs}
         return self.model.get_text_features(**inputs).to(self.device)
     
