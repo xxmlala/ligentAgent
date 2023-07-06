@@ -12,7 +12,7 @@ from pyvirtualdisplay import Display
 import other_utils
 import time
 from taskEnv import ComeHereEnv
-from agent.features import CLIPWrapper
+from agent.features import CLIPWrapper, Identity, SimpleCNNEncoder
 
 logger = logging.getLogger(__name__)
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -44,6 +44,32 @@ def eval_env(env, agent, episodes, seed, action_decoder, env_decoder):
     ligent.set_scenes_dir("")
     return np.mean(returns), np.std(returns), distance_info_s
 
+def try_env(cfg, models_name):
+    # ligent.set_scenes_dir("C:/Users/19355/Desktop/drlProject/LIGENT/custom_scenes")
+    # ligent.set_scenes_dir("./custom_scenes_test")
+    env = ligent.Environment(path="C:/Users/19355/Desktop/drlProject/ligent-windows/06061943_win_224/LIGENT.exe")
+    action_decoder = instantiate(cfg.action_decoder, device=device)
+    
+    feature_net = instantiate(cfg.feature_net, device=device, text_encoder=Identity, img_encoder=SimpleCNNEncoder)
+    agent = instantiate(cfg.agent, preprocess_net=feature_net, device=device)
+    # try: 
+    agent.load_full_path(models_name, load_value_net=False)
+
+    clip_encoder = CLIPWrapper(device)
+    state_img, state_text = env.reset()
+    last_state_text = ""
+    blocked, done = False, False
+    while not(done or blocked):
+        try:
+            if not state_text=="":
+                last_state_text = state_text
+            action = agent.get_action((state_img, clip_encoder.encode_text(last_state_text)), sample=False)
+            action_env = action_decoder.decode(action)
+            (state_img, state_text), reward, done, info = env.step(**action_env)
+        except:
+            env.close()
+    ligent.set_scenes_dir("")
+    print(f"models: {models_name}")
     
 def test_env(cfg, episodes, models_name):
     # ligent.set_scenes_dir("C:/Users/19355/Desktop/drlProject/LIGENT/custom_scenes")
@@ -96,7 +122,8 @@ def main(cfg):
         # with torch.autograd.set_detect_anomaly(True):
     # train(cfg, seed, log_dict, logger, *(get_dataloader())) best_model_seed_3407_actor
     # test_env(cfg, episodes=1000, models_name='/home/liuan/workspace/drl_project/ligentAgent/eval_models/directlyPPO/best_model_seed_3407_')
-    test_env(cfg, episodes=1000, models_name='C:/Users/19355/Desktop/drlProject/ligentAgent/models/best_acc_')
+    # test_env(cfg, episodes=1000, models_name='C:/Users/19355/Desktop/drlProject/ligentAgent/models/cnn/best_acc_')
+    try_env(cfg, models_name='C:/Users/19355/Desktop/drlProject/ligentAgent/models/cnn/best_acc_')
     # test_env(cfg, episodes=1000, models_name='/home/liuan/workspace/drl_project/ligentAgent/eval_models/IL_PPO2/step_303104_model_seed_3407_')
     # start_time = time.time()
     # test_env(cfg, episodes=1000, models_name='/home/liuan/workspace/drl_project/ligentAgent/eval_models/IL/best_acc_')
