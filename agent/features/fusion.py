@@ -79,7 +79,10 @@ class CLIPWrapper(nn.Module):
         return self.model.get_text_features(**inputs).to(self.device)
     
     def get_params(self):
-        return self.model.parameters()
+        return list(self.model.parameters())
+
+    def get_vit_params(self):
+        return list(self.model.vision_model.parameters()) + list(self.model.visual_projection.parameters())
 
     def forward(self):
         pass

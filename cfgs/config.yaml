@@ -57,6 +57,10 @@ feature_net:
   img_input_size: ${buffer.state_img_size}
   img_hidden_size: 512
   fusion_hidden_size: 512
+  # text_encoder: 
+  #   _target_: agent.features.Identity
+  # img_encoder:
+  #   _target_: agent.features.SimpleCNNEncoder
 
 hydra:
   job:
