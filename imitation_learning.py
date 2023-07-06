@@ -84,6 +84,7 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
     # env = ligent.Environment(path="/home/liuan/workspace/drl_project/ligent-linux-server/LIGENT.x86_64")
     # env_decoder = ComeHereEnv(distance_reward=10, success_reward=200, distance_min=1.2, step_penalty=1, episode_len=500, is_debug=True)
     # action_decoder = instantiate(cfg.action_decoder, device=device)
+    logger.info("VisionFeatureModel: CLIP")
     other_utils.set_seed_everywhere("", seed)
     feature_net = instantiate(cfg.feature_net, device=device)
     agent = instantiate(cfg.agent, preprocess_net=feature_net, device=device)
@@ -96,10 +97,12 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
     clip_encoder = CLIPWrapper(device)
     clip_prameters = clip_encoder.get_params()
     clip_vit_parameters = clip_encoder.get_vit_params()
-    optimizer = optim.Adam(list(model.parameters()) + clip_vit_parameters, lr=3e-4)
+    optimizer = optim.Adam(list(model.parameters()), lr=3e-4)
+    optimizer_vit = optim.Adam(clip_vit_parameters, lr=1e-5)
     # optimizer = optim.Adam(list(clip_prameters), lr=3e-4)
     # optimizer = optim.Adam(list(model.parameters()), lr=3e-4)
     best_eval_acc = 0
+    best_eval_train_acc = -1
     not_ascending_epoch = 0
     epoch_cnt = 0
     while True:
@@ -110,6 +113,7 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
         train_predictions, train_labels = [],[]
         for obs_V,obs_T, labels in tqdm(train_loader):
             optimizer.zero_grad()
+            optimizer_vit.zero_grad()
             # obs_T = torch.zeros((len(obs_V), 520), device=device)
             outputs = model(clip_encoder.encode_images(obs_V), clip_encoder.encode_text(obs_T))
             _,t_predictions = torch.max(outputs,-1)
@@ -119,7 +123,7 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-
+            optimizer_vit.step()
             running_loss += loss.item()
             # break
         train_accuracy = balanced_accuracy_score(y_true=train_labels, y_pred=train_predictions)
@@ -133,14 +137,19 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
             best_eval_acc = eval_acc
             not_ascending_epoch = 0
             agent.save(f'best_acc_')
+            clip_encoder.save()
+            best_eval_train_acc = train_accuracy
+            logger.info(f'Save best acc model, best_eval_acc={best_eval_acc}, train_acc={train_accuracy}')
         else:
             not_ascending_epoch += 1
         
         if not_ascending_epoch >= 5:
             break
+    logger.info(f'Finish training with best_eval_acc ({best_eval_acc}) and corresponding train_acc {best_eval_train_acc}.')
 
 
-def get_dataloader(f_path="/home/liuan/workspace/drl_project/ligentAgent/dataset/Cls3Episode1000.h5", batch_size=256):
+def get_dataloader(logger, f_path="/home/liuan/workspace/drl_project/ligentAgent/dataset/Come2TreeHereEpisode1000_uint8_gzip9.h5", batch_size=256):
+    logger.info(f'DataSet: {f_path.split("/")[-1]}')
     with h5py.File(f_path, 'r') as f:
         # Get the datasets
         obs_V_dataset = f['obs_V']
@@ -152,7 +161,6 @@ def get_dataloader(f_path="/home/liuan/workspace/drl_project/ligentAgent/dataset
         obs_T_dataset = obs_T_dataset[:]
         action_dataset = action_dataset[:]
 
-    
     # Convert the numpy arrays to PyTorch Tensors
     # obs_V_tensor = torch.from_numpy(obs_V_dataset).to(device)
     # action_tensor = torch.from_numpy(action_dataset).to(device).type(torch.long)
@@ -163,7 +171,6 @@ def get_dataloader(f_path="/home/liuan/workspace/drl_project/ligentAgent/dataset
     train_envDataset = EnvDataset(obs_V=obs_V_dataset[train_index], obs_T=obs_T_dataset[train_index], action=action_dataset[train_index])
     eval_envDataset = EnvDataset(obs_V=obs_V_dataset[eval_index], obs_T=obs_T_dataset[eval_index], action=action_dataset[eval_index])
     # train_len = int(len(random_idx)*0.7)
-
 
     # Create a DataLoader from the TensorDataset
     train_dataloader = DataLoader(train_envDataset, batch_size=batch_size, shuffle=True)
@@ -176,7 +183,7 @@ def main(cfg):
     log_dict = other_utils.get_log_dict(cfg.agent._target_)
     for seed in cfg.seeds:
         with torch.autograd.set_detect_anomaly(True):
-            train(cfg, seed, log_dict, logger, *(get_dataloader(batch_size=256)))
+            train(cfg, seed, log_dict, logger, *(get_dataloader(logger, batch_size=256)))
     
 
 

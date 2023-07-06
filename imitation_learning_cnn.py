@@ -84,7 +84,7 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
     # env = ligent.Environment(path="/home/liuan/workspace/drl_project/ligent-linux-server/LIGENT.x86_64")
     # env_decoder = ComeHereEnv(distance_reward=10, success_reward=200, distance_min=1.2, step_penalty=1, episode_len=500, is_debug=True)
     # action_decoder = instantiate(cfg.action_decoder, device=device)
-    logger.info(f"Model: CNN")
+    logger.info(f"VisionFeatureModel: CNN")
     other_utils.set_seed_everywhere("", seed)
     feature_net = instantiate(cfg.feature_net, device=device, text_encoder=Identity, img_encoder=SimpleCNNEncoder)
     agent = instantiate(cfg.agent, preprocess_net=feature_net, device=device)
@@ -146,7 +146,6 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
     logger.info(f'Finish training with best_eval_acc ({best_eval_acc}) and corresponding train_acc {best_eval_train_acc}.')
 
 def get_dataloader(logger, f_path="/home/liuan/workspace/drl_project/ligentAgent/dataset/Episode1000_ChristmasTree.h5", batch_size=256):
-
     logger.info(f'DataSet: {f_path.split("/")[-1]}')
     with h5py.File(f_path, 'r') as f:
         # Get the datasets
@@ -183,7 +182,7 @@ def main(cfg):
     log_dict = other_utils.get_log_dict(cfg.agent._target_)
     for seed in cfg.seeds:
         with torch.autograd.set_detect_anomaly(True):
-            train(cfg, seed, log_dict, logger, *(get_dataloader(logger=logger,batch_size=256,f_path="/home/liuan/workspace/drl_project/ligentAgent/dataset/Come2TreeHereEpisode1000.h5")))
+            train(cfg, seed, log_dict, logger, *(get_dataloader(logger=logger,batch_size=256,f_path="/home/liuan/workspace/drl_project/ligentAgent/dataset/Cls3Episode1000_uint8_gzip9.h5")))
     
 
 

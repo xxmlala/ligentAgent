@@ -3,7 +3,7 @@ import torch.nn as nn
 # from ..batch import Batch
 from ..utils import build_mlp
 from transformers import CLIPProcessor, CLIPModel
-
+import os
 class SimpleCNNEncoder(nn.Module):
     def __init__(self, input_size, output_size, device):
         super().__init__()
@@ -62,11 +62,16 @@ class Identity(nn.Module):
 
 
 class CLIPWrapper(nn.Module):
-    def __init__(self, device):
+    def __init__(self, device, path="openai/clip-vit-base-patch32"):
         super().__init__()
-        self.model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device)
+        self.model = CLIPModel.from_pretrained(path).to(device)
         self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
         self.device = device
+
+    def save(self):
+        if not os.path.exists('./models'):
+            os.makedirs('./models')
+        self.model.save_pretrained('./models/ligent-clip-vit-base-patch32')
 
     def encode_images(self, images):
         inputs = self.processor(images = images, return_tensors='pt')
