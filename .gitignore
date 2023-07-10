@@ -8,4 +8,6 @@ debug.ipynb
 env_config.json
 game_states.json
 last_scene.json
-obs_visions_ChristmasTree
+obs_visions*
+collect_data.bat
+collect_data.log
