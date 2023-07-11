@@ -11,3 +11,4 @@ last_scene.json
 obs_visions*
 collect_data.bat
 collect_data.log
+demo.py
