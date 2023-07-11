@@ -92,7 +92,8 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
 
     model = PolicyNet(feature_net=agent.get_feature_net(), actor_net=agent.get_actor_net())
     # criterion = nn.CrossEntropyLoss(weight=torch.as_tensor([29.7,1.5,16.0,4.5], device=device))
-    criterion = nn.CrossEntropyLoss(weight=torch.as_tensor([1.4,15.4,4.4], device=device))
+    # criterion = nn.CrossEntropyLoss(weight=torch.as_tensor([1.4,15.4,4.4], device=device))
+    criterion = nn.CrossEntropyLoss(weight=torch.as_tensor([33.7,1.6,136.9,52.5,22.2,7.2,16.6,13.1], device=device))
 
     clip_encoder = CLIPWrapper(device)
     clip_prameters = clip_encoder.get_params()
@@ -148,7 +149,7 @@ def train(cfg, seed: int, log_dict: dict, logger: logging.Logger, train_loader, 
     logger.info(f'Finish training with best_eval_acc ({best_eval_acc}) and corresponding train_acc {best_eval_train_acc}.')
 
 
-def get_dataloader(logger, f_path="/home/liuan/workspace/drl_project/ligentAgent/dataset/Come2TreeHereEpisode1000_uint8_gzip9.h5", batch_size=256):
+def get_dataloader(logger, f_path="/home/liuan/workspace/drl_project/ligentAgent/dataset/cls8/AllEpisode1000.h5", batch_size=256):
     logger.info(f'DataSet: {f_path.split("/")[-1]}')
     with h5py.File(f_path, 'r') as f:
         # Get the datasets
