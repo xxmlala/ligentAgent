@@ -76,22 +76,38 @@ def inference_come_to_sth_action(info, goal_object:str='player'):
     degree_yaw = deg(mate2goal, face_direction_mate)
     degree_pitch = deg(camera_mate2goal, face_direction_camera_mate)
 
+    # action_encoder = {
+    #     'no_op': 0,
+    #     'move_forward': 1,
+    #     'look_yaw_n30d': 2,
+    #     'look_yaw_n8d': 3,
+    #     'look_yaw_p8d': 4,
+    #     'look_yaw_p30d': 5,
+    #     'look_pitch_n10d': 6,
+    #     'look_pitch_p10d': 7,
+    #     'is_grab': 8,
+    #     'is_speak': 9
+    # }
     action_encoder = {
         'no_op': 0,
         'move_forward': 1,
-        'look_yaw_n30d': 2,
-        'look_yaw_n8d': 3,
-        'look_yaw_p8d': 4,
-        'look_yaw_p30d': 5,
-        'look_pitch_n10d': 6,
-        'look_pitch_p10d': 7,
-        'is_grab': 8,
-        'is_speak': 9
+        'look_yaw_n8d': 2,
+        'look_yaw_p8d': 3,
+        'look_yaw_p30d': 4,
+        'look_pitch_n10d': 5,
+        'look_pitch_p10d': 6,
+        'is_grab': 7,
+        'is_speak': 8
     }
-
-    def get_look_yaw(cur_degree_yaw, tolerance, eps=1):
+    '''
+    if degree_pitch \in [-18,-14-eps]:
+        turn left 7
+    elif degree_pitch \in [14+eps, ...]:
+        turn right 28
+    '''
+    def get_look_yaw(cur_degree_yaw, tolerance, boundary=20, eps=1):
         assert abs(cur_degree_yaw) > tolerance+eps, f"cur_degree_yaw={cur_degree_yaw}, tolerance={tolerance}"
-        if cur_degree_yaw>=-(tolerance*2) and degree_yaw<-tolerance-eps:
+        if cur_degree_yaw>=-boundary+eps and degree_yaw<-tolerance-eps:
             action_env = {
                 "move_right": 0,
                 "move_forward": 0,
@@ -102,7 +118,7 @@ def inference_come_to_sth_action(info, goal_object:str='player'):
                 "speak": "",
                 }
             action_str = f"look_yaw_n{int(tolerance*2)}d"
-        else: # cur_degree_yaw >= tolerance+eps or cur_degree_yaw<-tolerance*2:
+        else: # cur_degree_yaw >= tolerance+eps and cur_degree_yaw<boundary-eps:
             action_env = {
                 "move_right": 0,
                 "move_forward": 0,
@@ -115,10 +131,13 @@ def inference_come_to_sth_action(info, goal_object:str='player'):
             action_str = f'look_yaw_p{int(tolerance*2)}d'
         return action_env, action_str
     eps = 1
-    if abs(degree_yaw) <= 15+eps:
-        if abs(degree_yaw) > 4+eps:
-            action_env, action_str = get_look_yaw(degree_yaw, 4)
-        elif abs(degree_pitch) <= 5+eps:
+    yaw_boundary = 20
+    tiny_yaw_tolerance = 4
+    pitch_tolerance = 5
+    if abs(degree_yaw) <= yaw_boundary-eps:
+        if abs(degree_yaw) > tiny_yaw_tolerance+eps:
+            action_env, action_str = get_look_yaw(degree_yaw, tiny_yaw_tolerance)
+        elif abs(degree_pitch) <= pitch_tolerance+eps:
             action_env = {
                 "move_right": 0,
                 "move_forward": 1,
@@ -129,7 +148,7 @@ def inference_come_to_sth_action(info, goal_object:str='player'):
                 "speak": "",
                 }
             action_str = 'move_forward'
-        elif degree_pitch <-5-eps:
+        elif degree_pitch <-pitch_tolerance-eps:
             action_env = {
                 "move_right": 0,
                 "move_forward": 0,
@@ -152,7 +171,16 @@ def inference_come_to_sth_action(info, goal_object:str='player'):
                 }
             action_str = 'look_pitch_n10d'
     else:
-        action_env, action_str = get_look_yaw(degree_yaw, 15)
+        action_env = {
+                "move_right": 0,
+                "move_forward": 0,
+                "look_yaw": 30,
+                "look_pitch": 0.0,
+                "jump": False,
+                "grab": False,
+                "speak": "",
+                }
+        action_str = 'look_yaw_p30d'
     
     return action_env, action_encoder[action_str], action_str
 
@@ -262,5 +290,6 @@ if __name__ == "__main__":
         env = ligent.Environment(path="C:/Users/19355/Desktop/drlProject/ligent-windows/06061943_win_224/LIGENT.exe")
         collect(env,args.episodes_num, collect_object=args.goal_object)
     except Exception as e:
-        print(e, flush=True)
+        # print(e, flush=True)
+        raise
         env.close()
