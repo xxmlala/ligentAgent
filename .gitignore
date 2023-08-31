@@ -1,7 +1,7 @@
 runs
 __pycache__
 custom_scenes
-dataset
+dataset*
 models
 eval_models
 debug.ipynb
@@ -12,3 +12,5 @@ obs_visions*
 collect_data.bat
 collect_data.log
 demo.py
+debug_demo.py
+obstacles_map*

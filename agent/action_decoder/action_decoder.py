@@ -48,6 +48,90 @@ class ActionDecoder:
         # else:
         #     raise Exception
 
+        # if action_used[0] == 0:
+        #     action_env = { 
+        #         "move_right": 0,
+        #         "move_forward": 0,
+        #         "look_yaw": 0,
+        #         "look_pitch": 0,
+        #         "jump": False,
+        #         "grab": False,
+        #         "speak": "",
+        #     }
+        # elif action_used[0] == 1:
+        #     action_env = { 
+        #         "move_right": 0,
+        #         "move_forward": 1,
+        #         "look_yaw": 0,
+        #         "look_pitch": 0,
+        #         "jump": False,
+        #         "grab": False,
+        #         "speak": "",
+        #     }
+        # elif action_used[0] == 2:
+        #     action_env = { 
+        #         "move_right": 0,
+        #         "move_forward": 0,
+        #         "look_yaw": -30,
+        #         "look_pitch": 0,
+        #         "jump": False,
+        #         "grab": False,
+        #         "speak": "",
+        #     }
+        # elif action_used[0] == 3:
+        #     action_env = { 
+        #         "move_right": 0,
+        #         "move_forward": 0,
+        #         "look_yaw": -8,
+        #         "look_pitch": 0,
+        #         "jump": False,
+        #         "grab": False,
+        #         "speak": "",
+        #     }
+        # elif action_used[0] == 4:
+        #     action_env = { 
+        #         "move_right": 0,
+        #         "move_forward": 0,
+        #         "look_yaw": 8,
+        #         "look_pitch": 0,
+        #         "jump": False,
+        #         "grab": False,
+        #         "speak": "",
+        #     }
+        # elif action_used[0] == 5:
+        #     action_env = { 
+        #         "move_right": 0,
+        #         "move_forward": 0,
+        #         "look_yaw": 30,
+        #         "look_pitch": 0,
+        #         "jump": False,
+        #         "grab": False,
+        #         "speak": "",
+        #     }
+        # elif action_used[0] == 6:
+        #     action_env = { 
+        #         "move_right": 0,
+        #         "move_forward": 0,
+        #         "look_yaw": 0,
+        #         "look_pitch": -10,
+        #         "jump": False,
+        #         "grab": False,
+        #         "speak": "",
+        #     }
+        # elif action_used[0] == 7:
+        #     action_env = { 
+        #         "move_right": 0,
+        #         "move_forward": 0,
+        #         "look_yaw": 0,
+        #         "look_pitch": 10,
+        #         "jump": False,
+        #         "grab": False,
+        #         "speak": "",
+        #     }
+        # else:
+        #     raise Exception
+
+
         if action_used[0] == 0:
             action_env = { 
                 "move_right": 0,
@@ -72,7 +156,7 @@ class ActionDecoder:
             action_env = { 
                 "move_right": 0,
                 "move_forward": 0,
-                "look_yaw": -30,
+                "look_yaw": -8,
                 "look_pitch": 0,
                 "jump": False,
                 "grab": False,
@@ -82,7 +166,7 @@ class ActionDecoder:
             action_env = { 
                 "move_right": 0,
                 "move_forward": 0,
-                "look_yaw": -8,
+                "look_yaw": 8,
                 "look_pitch": 0,
                 "jump": False,
                 "grab": False,
@@ -92,7 +176,7 @@ class ActionDecoder:
             action_env = { 
                 "move_right": 0,
                 "move_forward": 0,
-                "look_yaw": 8,
+                "look_yaw": 30,
                 "look_pitch": 0,
                 "jump": False,
                 "grab": False,
@@ -102,23 +186,13 @@ class ActionDecoder:
             action_env = { 
                 "move_right": 0,
                 "move_forward": 0,
-                "look_yaw": 30,
-                "look_pitch": 0,
-                "jump": False,
-                "grab": False,
-                "speak": "",
-            }
-        elif action_used[0] == 6:
-            action_env = { 
-                "move_right": 0,
-                "move_forward": 0,
                 "look_yaw": 0,
                 "look_pitch": -10,
                 "jump": False,
                 "grab": False,
                 "speak": "",
             }
-        elif action_used[0] == 7:
+        elif action_used[0] == 6:
             action_env = { 
                 "move_right": 0,
                 "move_forward": 0,

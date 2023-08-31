@@ -56,7 +56,7 @@ def try_env(cfg, models_name):
     # try: 
     agent.load_full_path(models_name, load_value_net=False)
 
-    clip_encoder = CLIPWrapper(device, path='C:/Users/19355/Desktop/drlProject/ligentAgent/models/clip_cls8/ligent-clip-vit-base-patch32')
+    clip_encoder = CLIPWrapper(device, path='C:/Users/19355/Desktop/drlProject/ligentAgent/models/clip_cls7/ligent-clip-vit-base-patch32')
     state_img, state_text = env.reset()
     last_state_text = ""
     blocked, done = False, False
@@ -134,7 +134,7 @@ def main(cfg):
     # train(cfg, seed, log_dict, logger, *(get_dataloader())) best_model_seed_3407_actor
     # test_env(cfg, episodes=1000, models_name='/home/liuan/workspace/drl_project/ligentAgent/eval_models/directlyPPO/best_model_seed_3407_')
     # test_env(cfg, episodes=1000, models_name='C:/Users/19355/Desktop/drlProject/ligentAgent/models/cnn/best_acc_')
-    try_env(cfg, models_name='C:/Users/19355/Desktop/drlProject/ligentAgent/models/clip_cls8/best_acc_')
+    try_env(cfg, models_name='C:/Users/19355/Desktop/drlProject/ligentAgent/models/clip_cls7/best_acc_')
     # test_env(cfg, episodes=1000, models_name='/home/liuan/workspace/drl_project/ligentAgent/eval_models/IL_PPO2/step_303104_model_seed_3407_')
     # start_time = time.time()
     # test_env(cfg, episodes=1000, models_name='/home/liuan/workspace/drl_project/ligentAgent/eval_models/IL/best_acc_')

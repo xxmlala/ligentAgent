@@ -1,7 +1,7 @@
 _target_: agent.ppo.PPOAgent
 nstep: ${nstep}
 # action_dims: [3, 4, 13, 13, 2, 2, 2]
-action_dims: [8] # 
+action_dims: [7] # 
 # action_dims: [4] #(no op, forward, turn left/right)
 # action_dims: [3] #(forward, turn left/right)
 # action_dims: [3,2,3]
